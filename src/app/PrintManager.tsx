@@ -1,9 +1,23 @@
-import PrinterContoller from "../modules/SUMNI/PrinterContoller";
+import PrinterController from "../modules/SUMNI/PrinterContoller";
 import React, { useState } from "react";
 import { imageBase64 } from "../assets/base64";
-import { View, Text, Button, TextInput, StyleSheet, Alert, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  Button,
+  TextInput,
+  StyleSheet,
+  Alert,
+  ScrollView,
+  ToastAndroid,
+  ActivityIndicator,
+} from "react-native";
+
+import { mockData } from "../mock/mockData";
+import { getTicket } from "../services/getTicket";
 
 function PrintManager() {
+  const [isLoading, setIsLoading] = React.useState(false); // Estado para armazenar o token
   const [textToPrint, setTextToPrint] = useState(""); // Estado para armazenar o texto a ser impresso
   const [base64Image, setBase64Image] = useState(""); // Estado para armazenar a imagem Base64
   const [printerStatus, setPrinterStatus] = useState<string | null>(null); // Estado para exibir o status da impressora
@@ -14,60 +28,106 @@ function PrintManager() {
       Alert.alert("Erro", "Por favor, insira algum texto para imprimir.");
       return;
     }
-    await PrinterContoller.printCustomText(textToPrint, 120, 1);
+    try {
+      await PrinterController.printCustomText({
+        text: textToPrint,
+        fontSize: 24,
+        alignment: 1, // Centro
+        blankLines: 10,
+      });
+      Alert.alert("Sucesso", "Texto impresso com sucesso!");
+    } catch (error) {
+      Alert.alert("Erro", `Falha ao imprimir texto: ${error}`);
+    }
   };
 
+  // Função para imprimir uma imagem Base64
   const handlePrintImage = async () => {
-    if (!base64Image.trim()) {
+    const imageToPrint = base64Image.trim() || imageBase64.trim();
+    if (!imageToPrint) {
       Alert.alert("Erro", "Por favor, insira uma string Base64 válida.");
       return;
     }
-    await PrinterContoller.printCustomImage(base64Image, 384);
+
+    if (mockData.IsValid) {
+      for (const image of mockData.Data) {
+        try {
+          await PrinterController.printCustomImage({
+            base64Image: image.Base64,
+            maxWidth: 380,
+            blankLines: 2,
+          });
+        } catch (error) {
+          ToastAndroid.show(`Erro, Falha ao imprimir imagem: ${error}`, ToastAndroid.SHORT);
+        }
+      }
+      return;
+    }
+    Alert.alert("Houver uma Falha", "Por favor, verifique a função [handlePrintImage]");
   };
 
-  // Função para imprimir imagem em Base64
-  const handlePrintImageBase64 = async () => {
-    if (!imageBase64.trim()) {
-      Alert.alert("Erro", "Por favor, verifique se a Base64 válida.");
+  // Função para imprimir uma imagem Base64
+  const handlePrintImageApi = async () => {
+    setIsLoading(true);
+    const resultTicket = await getTicket();
+
+    if (!resultTicket.IsValid) {
+      setIsLoading(false);
+      Alert.alert("Erro", "Por favor, insira uma string Base64 válida.");
       return;
     }
 
-    const result = JSON.stringify(imageBase64);
-
-    console.log("result", result);
-
-    await PrinterContoller.printCustomImage(result, 384);
-    await PrinterContoller.printCustomText("", 24, 1);
+    if (resultTicket.IsValid) {
+      for (const image of resultTicket.Data) {
+        try {
+          await PrinterController.printCustomImage({
+            base64Image: image.base64,
+            maxWidth: 380,
+            blankLines: 2,
+          });
+        } catch (error) {
+          ToastAndroid.show(`Erro, Falha ao imprimir imagem: ${error}`, ToastAndroid.SHORT);
+        }
+      }
+      setIsLoading(false);
+      return;
+    }
+    Alert.alert("Houver uma Falha", "Por favor, verifique a função [handlePrintImage]");
+    setIsLoading(false);
   };
 
   // Função para verificar o status da impressora
   const handleCheckPrinterStatus = async () => {
     try {
-      const status = await PrinterContoller.getPrinterStatus();
+      const status = await PrinterController.getPrinterStatus();
       let statusMessage;
       switch (status) {
         case 0:
           statusMessage = "Impressora pronta.";
           break;
-        case -1:
-          statusMessage = "Erro desconhecido.";
-          break;
-        case -2:
+        case 1:
           statusMessage = "Sem papel.";
           break;
-        case -3:
-          statusMessage = "Impressora superaquecida.";
+        case 2:
+          statusMessage = "Sobreaquecimento.";
+          break;
+        case 3:
+          statusMessage = "Tampa aberta.";
           break;
         default:
           statusMessage = `Status desconhecido (${status}).`;
       }
       setPrinterStatus(statusMessage);
     } catch (error) {
-      Alert.alert("Erro", `Erro ao verificar o status da impressora: ${error || error}`);
+      Alert.alert("Erro", `Erro ao verificar o status da impressora: ${error}`);
     }
   };
 
-  return (
+  return isLoading ? (
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+      <ActivityIndicator size={52} />
+    </View>
+  ) : (
     <ScrollView contentContainerStyle={styles.container}>
       {/* Verificar Status da Impressora */}
       <View style={styles.statusContainer}>
@@ -96,10 +156,8 @@ function PrintManager() {
         multiline
       />
       <Button title="Imprimir Imagem" onPress={handlePrintImage} />
-
-      {/* Imprimir Imagem Base64 */}
-      <Text style={styles.label}>Imagem Base64:</Text>
-      <Button title="Imprimir Base64" onPress={handlePrintImageBase64} />
+      <Text style={styles.label}>Imagem Base64 da API:</Text>
+      <Button title="Imprimir Imagens da API" onPress={handlePrintImageApi} />
     </ScrollView>
   );
 }

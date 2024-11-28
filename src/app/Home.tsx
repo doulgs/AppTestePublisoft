@@ -17,6 +17,16 @@ function Home() {
           variant="solid"
         />
       </View>
+
+      <View style={styles.content}>
+        <CustomButton
+          title="Area de testes do End-Points"
+          onPress={() => navigate("ApiManager")}
+          icon={<Ionicons name="git-network" size={20} color="#fff" />}
+          iconPosition="right"
+          variant="solid"
+        />
+      </View>
     </View>
   );
 }

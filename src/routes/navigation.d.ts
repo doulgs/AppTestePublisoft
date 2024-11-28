@@ -3,6 +3,7 @@ export declare global {
     export interface RootParamList {
       Home: undefined;
       PrintManager: undefined;
+      ApiManager: undefined;
     }
   }
 }
