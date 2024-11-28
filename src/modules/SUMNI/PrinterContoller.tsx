@@ -7,39 +7,42 @@ const { SunmiPrinterModule } = NativeModules;
 type PrinterStatus = 0 | -1 | -2 | -3 | number;
 
 // Definição de Tipos para Melhor Tipagem
-interface PrinterContoller {
-  printText: (text: string) => Promise<void>;
-  printBase64Image: (base64Image: string) => Promise<void>;
+interface PrinterController {
+  printCustomText: (text: string, fontSize: number, alignment: number) => Promise<void>;
+  printCustomImage: (base64Image: string, maxWidth: number) => Promise<void>;
   getPrinterStatus: () => Promise<PrinterStatus>;
   isPrinterReady: () => Promise<boolean>;
 }
 
 // Implementação das Funções da Impressora
-const PrinterContoller: PrinterContoller = {
+const PrinterController: PrinterController = {
   /**
-   * Imprime um texto simples na impressora.
+   * Imprime texto com opções de personalização.
    * @param text Texto a ser impresso.
+   * @param fontSize Tamanho da fonte.
+   * @param alignment Alinhamento do texto (0: esquerda, 1: centro, 2: direita).
    */
-  async printText(text: string): Promise<void> {
+  async printCustomText(text: string, fontSize: number, alignment: number): Promise<void> {
     try {
-      await SunmiPrinterModule.printText(text);
-      console.log("[PrinterContoller] Texto impresso com sucesso.");
+      await SunmiPrinterModule.printCustomText(text, fontSize, alignment);
+      console.log("[PrinterController] Texto personalizado impresso com sucesso.");
     } catch (error) {
-      console.error("[PrinterContoller] Erro ao imprimir texto:", error);
+      console.error("[PrinterController] Erro ao imprimir texto personalizado:", error);
       throw error;
     }
   },
 
   /**
-   * Imprime uma imagem em formato Base64 na impressora.
+   * Imprime uma imagem em formato Base64 com largura personalizada.
    * @param base64Image String da imagem em Base64.
+   * @param maxWidth Largura máxima da imagem.
    */
-  async printBase64Image(base64Image: string): Promise<void> {
+  async printCustomImage(base64Image: string, maxWidth: number): Promise<void> {
     try {
-      await SunmiPrinterModule.printBase64Image(base64Image);
-      console.log("[PrinterContoller] Imagem impressa com sucesso.");
+      await SunmiPrinterModule.printCustomImage(base64Image, maxWidth);
+      console.log("[PrinterController] Imagem personalizada impressa com sucesso.");
     } catch (error) {
-      console.error("[PrinterContoller] Erro ao imprimir imagem:", error);
+      console.error("[PrinterController] Erro ao imprimir imagem personalizada:", error);
       throw error;
     }
   },
@@ -51,10 +54,10 @@ const PrinterContoller: PrinterContoller = {
   async getPrinterStatus(): Promise<PrinterStatus> {
     try {
       const status: PrinterStatus = await SunmiPrinterModule.printerStatus();
-      console.log(`[PrinterContoller] Status da impressora: ${status}`);
+      console.log(`[PrinterController] Status da impressora: ${status}`);
       return status;
     } catch (error) {
-      console.error("[PrinterContoller] Erro ao obter status da impressora:", error);
+      console.error("[PrinterController] Erro ao obter status da impressora:", error);
       throw error;
     }
   },
@@ -65,15 +68,15 @@ const PrinterContoller: PrinterContoller = {
    */
   async isPrinterReady(): Promise<boolean> {
     try {
-      const status = await PrinterContoller.getPrinterStatus();
+      const status = await PrinterController.getPrinterStatus();
       const isReady = status === 0;
-      console.log(`[PrinterContoller] Impressora pronta: ${isReady}`);
+      console.log(`[PrinterController] Impressora pronta: ${isReady}`);
       return isReady;
     } catch (error) {
-      console.error("[PrinterContoller] Erro ao verificar se a impressora está pronta:", error);
+      console.error("[PrinterController] Erro ao verificar se a impressora está pronta:", error);
       return false;
     }
   },
 };
 
-export default PrinterContoller;
+export default PrinterController;

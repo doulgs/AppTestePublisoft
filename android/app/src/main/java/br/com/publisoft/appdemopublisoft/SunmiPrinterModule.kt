@@ -44,87 +44,99 @@ class SunmiPrinterModule(reactContext: ReactApplicationContext) : ReactContextBa
             InnerPrinterManager.getInstance().bindService(context, printerCallback)
             println("[SUNMI PRINTER] Serviço vinculado com sucesso.")
         } catch (e: Exception) {
-            println("[SUNMI PRINTER] Erro ao vincular serviço: ${e.message}")
+            println("[SUNMI PRINTER] Erro ao vincular serviço: \${e.message}")
             e.printStackTrace()
         }
     }
 
     @ReactMethod
-    fun printText(text: String, promise: Promise) {
+    fun printCustomText(text: String, fontSize: Float, alignment: Int, promise: Promise) {
         if (printerService == null) {
-            val errorMsg = "[SUNMI PRINTER] Erro: Serviço de impressora não conectado."
-            println(errorMsg)
-            promise.reject("ERRO_IMPRESSORA", errorMsg)
+            promise.reject("ERRO_IMPRESSORA", "[SUNMI PRINTER] Serviço de impressora não conectado.")
             return
         }
 
         try {
-            printerService?.printText("$text\n", object : InnerResultCallback() {
+            // Definir alinhamento
+            printerService?.setAlignment(alignment, object : InnerResultCallback() {
                 override fun onRunResult(isSuccess: Boolean) {
-                    println("[SUNMI PRINTER] Resultado da impressão de texto: $isSuccess")
-                    if (isSuccess) {
-                        promise.resolve("Texto impresso com sucesso!")
-                    } else {
-                        promise.reject("ERRO_IMPRESSAO", "Falha ao imprimir texto.")
+                    if (!isSuccess) {
+                        promise.reject("ERRO_CONFIGURACAO", "Erro ao definir alinhamento.")
                     }
                 }
 
                 override fun onReturnString(result: String) {}
-                override fun onRaiseException(code: Int, msg: String) {
-                    println("[SUNMI PRINTER] Exceção durante impressão de texto: Código $code, Mensagem $msg")
+                override fun onRaiseException(code: Int, msg: String) {}
+                override fun onPrintResult(code: Int, msg: String) {}
+            })
+
+            // Definir tamanho da fonte
+            printerService?.setFontSize(fontSize, object : InnerResultCallback() {
+                override fun onRunResult(isSuccess: Boolean) {
+                    if (!isSuccess) {
+                        promise.reject("ERRO_CONFIGURACAO", "Erro ao definir tamanho da fonte.")
+                    }
                 }
 
-                override fun onPrintResult(code: Int, msg: String) {
-                    println("[SUNMI PRINTER] Resultado final da impressão de texto: Código $code, Mensagem $msg")
+                override fun onReturnString(result: String) {}
+                override fun onRaiseException(code: Int, msg: String) {}
+                override fun onPrintResult(code: Int, msg: String) {}
+            })
+
+            // Imprimir texto
+            printerService?.printText("\$text\n", object : InnerResultCallback() {
+                override fun onRunResult(isSuccess: Boolean) {
+                    if (isSuccess) {
+                        promise.resolve("Texto impresso com sucesso!")
+                    } else {
+                        promise.reject("ERRO_IMPRESSAO", "Erro ao imprimir texto.")
+                    }
                 }
+
+                override fun onReturnString(result: String) {}
+                override fun onRaiseException(code: Int, msg: String) {}
+                override fun onPrintResult(code: Int, msg: String) {}
             })
         } catch (e: RemoteException) {
-            val errorMsg = "[SUNMI PRINTER] Erro ao imprimir texto: ${e.message}"
-            println(errorMsg)
-            promise.reject("ERRO_IMPRESSAO", errorMsg, e)
+            promise.reject("ERRO_IMPRESSAO", "Erro ao imprimir: \${e.message}")
         }
     }
 
     @ReactMethod
-    fun printBase64Image(base64String: String, promise: Promise) {
+    fun printCustomImage(base64String: String, maxWidth: Int, promise: Promise) {
         if (printerService == null) {
-            val errorMsg = "[SUNMI PRINTER] Erro: Serviço de impressora não conectado."
-            println(errorMsg)
-            promise.reject("ERRO_IMPRESSORA", errorMsg)
+            promise.reject("ERRO_IMPRESSORA", "[SUNMI PRINTER] Serviço de impressora não conectado.")
             return
         }
 
         try {
             val decodedBytes = Base64.decode(base64String, Base64.DEFAULT)
-            val bitmap = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
+            val originalBitmap = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
 
-            if (bitmap != null) {
-                printerService?.printBitmap(bitmap, object : InnerResultCallback() {
-                    override fun onRunResult(isSuccess: Boolean) {
-                        println("[SUNMI PRINTER] Resultado da impressão de imagem: $isSuccess")
-                        if (isSuccess) {
-                            promise.resolve("Imagem impressa com sucesso!")
-                        } else {
-                            promise.reject("ERRO_IMAGEM", "Falha ao imprimir a imagem.")
-                        }
-                    }
+            // Redimensionar imagem
+            val resizedBitmap = Bitmap.createScaledBitmap(
+                originalBitmap,
+                maxWidth,
+                (originalBitmap.height * maxWidth / originalBitmap.width),
+                true
+            )
 
-                    override fun onReturnString(result: String) {}
-                    override fun onRaiseException(code: Int, msg: String) {
-                        println("[SUNMI PRINTER] Exceção durante impressão de imagem: Código $code, Mensagem $msg")
+            // Imprimir imagem redimensionada
+            printerService?.printBitmap(resizedBitmap, object : InnerResultCallback() {
+                override fun onRunResult(isSuccess: Boolean) {
+                    if (isSuccess) {
+                        promise.resolve("Imagem impressa com sucesso!")
+                    } else {
+                        promise.reject("ERRO_IMAGEM", "Erro ao imprimir imagem.")
                     }
+                }
 
-                    override fun onPrintResult(code: Int, msg: String) {
-                        println("[SUNMI PRINTER] Resultado final da impressão de imagem: Código $code, Mensagem $msg")
-                    }
-                })
-            } else {
-                promise.reject("ERRO_IMAGEM", "Falha ao decodificar a imagem Base64.")
-            }
+                override fun onReturnString(result: String) {}
+                override fun onRaiseException(code: Int, msg: String) {}
+                override fun onPrintResult(code: Int, msg: String) {}
+            })
         } catch (e: Exception) {
-            val errorMsg = "[SUNMI PRINTER] Erro ao imprimir imagem: ${e.message}"
-            println(errorMsg)
-            promise.reject("ERRO_IMAGEM", errorMsg, e)
+            promise.reject("ERRO_IMAGEM", "Erro ao processar imagem: \${e.message}")
         }
     }
 
@@ -156,7 +168,7 @@ class SunmiPrinterModule(reactContext: ReactApplicationContext) : ReactContextBa
                 println("[SUNMI PRINTER] Serviço de impressora desvinculado com sucesso.")
             }
         } catch (e: Exception) {
-            println("[SUNMI PRINTER] Erro ao desvincular o serviço de impressora: ${e.message}")
+            println("[SUNMI PRINTER] Erro ao desvincular o serviço de impressora: \${e.message}")
             e.printStackTrace()
         }
     }

@@ -1,5 +1,6 @@
 import PrinterContoller from "../modules/SUMNI/PrinterContoller";
 import React, { useState } from "react";
+import { imageBase64 } from "../assets/base64";
 import { View, Text, Button, TextInput, StyleSheet, Alert, ScrollView } from "react-native";
 
 function PrintManager() {
@@ -13,16 +14,30 @@ function PrintManager() {
       Alert.alert("Erro", "Por favor, insira algum texto para imprimir.");
       return;
     }
-    await PrinterContoller.printText(textToPrint);
+    await PrinterContoller.printCustomText(textToPrint, 120, 1);
   };
 
-  // Função para imprimir imagem em Base64
   const handlePrintImage = async () => {
     if (!base64Image.trim()) {
       Alert.alert("Erro", "Por favor, insira uma string Base64 válida.");
       return;
     }
-    await PrinterContoller.printBase64Image(base64Image);
+    await PrinterContoller.printCustomImage(base64Image, 384);
+  };
+
+  // Função para imprimir imagem em Base64
+  const handlePrintImageBase64 = async () => {
+    if (!imageBase64.trim()) {
+      Alert.alert("Erro", "Por favor, verifique se a Base64 válida.");
+      return;
+    }
+
+    const result = JSON.stringify(imageBase64);
+
+    console.log("result", result);
+
+    await PrinterContoller.printCustomImage(result, 384);
+    await PrinterContoller.printCustomText("", 24, 1);
   };
 
   // Função para verificar o status da impressora
@@ -54,7 +69,11 @@ function PrintManager() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.header}>Tela de Impressão</Text>
+      {/* Verificar Status da Impressora */}
+      <View style={styles.statusContainer}>
+        <Button title="Verificar Status da Impressora" onPress={handleCheckPrinterStatus} />
+        {printerStatus && <Text style={styles.status}>{printerStatus}</Text>}
+      </View>
 
       {/* Imprimir Texto */}
       <Text style={styles.label}>Texto para impressão:</Text>
@@ -78,11 +97,9 @@ function PrintManager() {
       />
       <Button title="Imprimir Imagem" onPress={handlePrintImage} />
 
-      {/* Verificar Status da Impressora */}
-      <View style={styles.statusContainer}>
-        <Button title="Verificar Status da Impressora" onPress={handleCheckPrinterStatus} />
-        {printerStatus && <Text style={styles.status}>{printerStatus}</Text>}
-      </View>
+      {/* Imprimir Imagem Base64 */}
+      <Text style={styles.label}>Imagem Base64:</Text>
+      <Button title="Imprimir Base64" onPress={handlePrintImageBase64} />
     </ScrollView>
   );
 }
@@ -92,7 +109,7 @@ export { PrintManager };
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    padding: 20,
+    padding: 16,
     backgroundColor: "#f5f5f5",
   },
   header: {
